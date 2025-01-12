@@ -1,0 +1,12 @@
+dependencies:
+- name: mongodb
+  repository: file://../mongodb
+  version: 0.1.0
+- name: server
+  repository: file://../server
+  version: 0.1.0
+- name: client
+  repository: file://../client
+  version: 0.1.0
+digest: sha256:586f81fb8233cd64aa45eb21cc55be42bef88fbd7a2a3018f95a7ce4f472f8e1
+generated: "2025-01-12T14:52:44.0901173+01:00"
