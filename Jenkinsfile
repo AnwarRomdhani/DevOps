@@ -1,88 +1,69 @@
 pipeline {
     agent any
-
     triggers {
-        pollSCM('H/5 * * * *') // Poll SCM every 5 minutes
+        pollSCM('H/5 * * * *')
     }
-
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Jenkins credentials ID for Docker Hub
-        IMAGE_NAME_SERVER = 'anwarromdhani/mern' // Replace with your Docker Hub username
-        IMAGE_NAME_CLIENT = 'anwarromdhani/my-frontend' // Replace with your Docker Hub username
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+        IMAGE_NAME_SERVER = 'anwarromdhani/mern'
+        IMAGE_NAME_CLIENT = 'anwarromdhani/my-frontend'
     }
-
     stages {
         stage('Checkout') {
             steps {
-                script {
-                    echo 'Starting Git checkout...'
-                    git branch: 'main',
-                        url: 'https://github.com/AnwarRomdhani/DevOps.git',
-                        credentialsId: 'Github_ssh' // Jenkins credentials ID for GitHub SSH key
-                }
+                git branch: 'main',
+                    url: 'https://github.com/AnwarRomdhani/DevOps.git',
+                    credentialsId: 'Github_ssh'
             }
         }
-
         stage('Build Server Image') {
             steps {
-                script {
-                    echo 'Building server image...'
-                    sh """
-                        docker build -t ${IMAGE_NAME_SERVER} ./backend
-                    """
+                dir('backend') {
+                    script {
+                        dockerImageServer = docker.build("${IMAGE_NAME_SERVER}")
+                    }
                 }
             }
         }
-
         stage('Build Client Image') {
             steps {
-                script {
-                    echo 'Building client image...'
-                    sh """
-                        docker build -t ${IMAGE_NAME_CLIENT} ./frontend
-                    """
+                dir('frontend') {
+                    script {
+                        dockerImageClient = docker.build("${IMAGE_NAME_CLIENT}")
+                    }
                 }
             }
         }
-
         stage('Scan Server Image') {
             steps {
                 script {
-                    echo 'Scanning server image...'
                     sh """
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                            aquasec/trivy:latest image --exit-code 0 \
-                            --severity LOW,MEDIUM,HIGH,CRITICAL \
-                            ${IMAGE_NAME_SERVER}
+                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image --exit-code 0 \
+                    --severity LOW,MEDIUM,HIGH,CRITICAL \
+                    ${IMAGE_NAME_SERVER}
                     """
                 }
             }
         }
-
         stage('Scan Client Image') {
             steps {
                 script {
-                    echo 'Scanning client image...'
                     sh """
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                            aquasec/trivy:latest image --exit-code 0 \
-                            --severity LOW,MEDIUM,HIGH,CRITICAL \
-                            ${IMAGE_NAME_CLIENT}
+                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image --exit-code 0 \
+                    --severity LOW,MEDIUM,HIGH,CRITICAL \
+                    ${IMAGE_NAME_CLIENT}
                     """
                 }
             }
         }
-
         stage('Push Images to Docker Hub') {
             steps {
                 script {
-                    echo 'Pushing images to Docker Hub...'
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh """
-                            echo "${PASSWORD}" | docker login -u "${USERNAME}" --password-stdin
-                            docker push ${IMAGE_NAME_SERVER}
-                            docker push ${IMAGE_NAME_CLIENT}
-                        """
+                    docker.withRegistry('', "${DOCKERHUB_CREDENTIALS}") {
+                        dockerImageServer.push()
+                        dockerImageClient.push()
                     }
                 }
             }
