@@ -31,7 +31,7 @@ spec:
           {{- range .paths }}
           - path: {{ .path }}
             {{- with .pathType }}
-            pathType: {{ . }}
+            pathType: {{ .pathType | default "Prefix" }}
             {{- end }}
             backend:
               service:
