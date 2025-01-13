@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mern-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mern-app
+  template:
+    metadata:
+      labels:
+        app: mern-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000" 
+    spec:
+      containers:
+      - name: mern-app
+        image: anwarromdhani/mern-app:latest
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+apiVersion: v1
+kind: Service
+metadata:
+  name: mern-app
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 32000 # Specify the port Docker Desktop will use
+  selector:
+    app: mern-app
